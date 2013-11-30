@@ -124,7 +124,7 @@
 .\" ========================================================================
 .\"
 .IX Title "GCC 1"
-.TH GCC 1 "2013-11-17" "gcc-4.8.3" "GNU"
+.TH GCC 1 "2013-11-29" "gcc-4.8.3" "GNU"
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -522,6 +522,7 @@ in the following sections.
 \&\-mtp=\fR\fIname\fR \fB\-mtls\-dialect=\fR\fIdialect\fR 
 \&\fB\-mword\-relocations 
 \&\-mfix\-cortex\-m3\-ldrd 
+\&\-mslow\-flash\-data 
 \&\-munaligned\-access\fR
 .Sp
 \&\fI\s-1AVR\s0 Options\fR
@@ -667,8 +668,7 @@ in the following sections.
 \&\-mcmodel=\fR\fIcode-model\fR \fB\-mabi=\fR\fIname\fR \fB\-maddress\-mode=\fR\fImode\fR 
 \&\fB\-m32 \-m64 \-mx32 \-mlarge\-data\-threshold=\fR\fInum\fR 
 \&\fB\-msse2avx \-mfentry \-m8bit\-idiv 
-\&\-mavx256\-split\-unaligned\-load \-mavx256\-split\-unaligned\-store 
-\&\-mstack\-protector\-guard=\fR\fIguard\fR
+\&\-mavx256\-split\-unaligned\-load \-mavx256\-split\-unaligned\-store\fR
 .Sp
 \&\fIi386 and x86\-64 Windows Options\fR
 \&\fB\-mconsole \-mcygwin \-mno\-cygwin \-mdll 
@@ -941,7 +941,7 @@ See \s-1RS/6000\s0 and PowerPC Options.
 \&\-mvis2  \-mno\-vis2  \-mvis3  \-mno\-vis3 
 \&\-mcbcond \-mno\-cbcond 
 \&\-mfmaf  \-mno\-fmaf  \-mpopc  \-mno\-popc 
-\&\-mfix\-at697f\fR
+\&\-mfix\-at697f \-mfix\-ut699\fR
 .Sp
 \&\fI\s-1SPU\s0 Options\fR
 \&\fB\-mwarn\-reloc \-merror\-reloc 
@@ -7735,9 +7735,6 @@ Use the \fBbfd\fR linker instead of the default linker.
 .IP "\fB\-fuse\-ld=gold\fR" 4
 .IX Item "-fuse-ld=gold"
 Use the \fBgold\fR linker instead of the default linker.
-.IP "\fB\-fuse\-ld=mcld\fR" 4
-.IX Item "-fuse-ld=mcld"
-Use the \fBmcld\fR linker instead of the default linker.
 .IP "\fB\-fcprop\-registers\fR" 4
 .IX Item "-fcprop-registers"
 After register allocation and post-register allocation instruction splitting,
@@ -10516,7 +10513,7 @@ assembly code.  Permissible names are: \fBarm2\fR, \fBarm250\fR,
 \&\fBarm1156t2\-s\fR, \fBarm1156t2f\-s\fR, \fBarm1176jz\-s\fR, \fBarm1176jzf\-s\fR,
 \&\fBcortex\-a5\fR, \fBcortex\-a7\fR, \fBcortex\-a8\fR, \fBcortex\-a9\fR, 
 \&\fBcortex\-a15\fR, \fBcortex\-r4\fR, \fBcortex\-r4f\fR, \fBcortex\-r5\fR,
-\&\fBcortex\-m4\fR, \fBcortex\-m3\fR,
+\&\fBcortex\-r7\fR, \fBcortex\-m4\fR, \fBcortex\-m3\fR,
 \&\fBcortex\-m1\fR,
 \&\fBcortex\-m0\fR,
 \&\fBcortex\-m0plus\fR,
@@ -10653,8 +10650,16 @@ responsible for initializing this register with an appropriate value
 before execution begins.
 .IP "\fB\-mpic\-register=\fR\fIreg\fR" 4
 .IX Item "-mpic-register=reg"
-Specify the register to be used for \s-1PIC\s0 addressing.  The default is R10
-unless stack-checking is enabled, when R9 is used.
+Specify the register to be used for \s-1PIC\s0 addressing.
+For standard \s-1PIC\s0 base case, the default will be any suitable register
+determined by compiler.  For single \s-1PIC\s0 base case, the default is
+\&\fBR9\fR if target is \s-1EABI\s0 based or stack-checking is enabled,
+otherwise the default is \fBR10\fR.
+.IP "\fB\-mpic\-data\-is\-text\-relative\fR" 4
+.IX Item "-mpic-data-is-text-relative"
+Assume that each data segments are relative to text segment at load time.
+Therefore, it permits addressing data using PC-relative operations.
+This option is on by default for targets other than VxWorks \s-1RTP\s0.
 .IP "\fB\-mpoke\-function\-name\fR" 4
 .IX Item "-mpoke-function-name"
 Write the name of each function into the text section, directly
@@ -10744,6 +10749,12 @@ Some Cortex\-M3 cores can cause data corruption when \f(CW\*(C`ldrd\*(C'\fR inst
 with overlapping destination and base registers are used.  This option avoids
 generating these instructions.  This option is enabled by default when
 \&\fB\-mcpu=cortex\-m3\fR is specified.
+.IP "\fB\-mslow\-flash\-data\fR" 4
+.IX Item "-mslow-flash-data"
+Assume loading data from flash is slower than fetching instruction.
+Therefore literal load is minimized for better performance.
+This option is only supported when compiling for ARMv7 M\-profile and
+off by default.
 .IP "\fB\-munaligned\-access\fR" 4
 .IX Item "-munaligned-access"
 .PD 0
@@ -13731,12 +13742,6 @@ to 255, 8\-bit unsigned integer divide is used instead of
 .IX Item "-mavx256-split-unaligned-store"
 .PD
 Split 32\-byte \s-1AVX\s0 unaligned load and store.
-.IP "\fB\-mstack\-protector\-guard=\fR\fIguard\fR" 4
-.IX Item "-mstack-protector-guard=guard"
-Generate stack protection code using canary at \fIguard\fR.  Supported
-locations are \fBglobal\fR or \fBtls\fR per thread at \f(CW%gs:20\fR (the default).
-This option has effect only when \fB\-fstack\-protector\fR
-or \fB\-fstack\-protector\-all\fR is also specified.
 .PP
 These \fB\-m\fR switches are supported in addition to the above
 on x86\-64 processors in 64\-bit environments.
@@ -18150,10 +18155,10 @@ the rules of the \s-1ABI\s0.
 Set the instruction set, register set, and instruction scheduling parameters
 for machine type \fIcpu_type\fR.  Supported values for \fIcpu_type\fR are
 \&\fBv7\fR, \fBcypress\fR, \fBv8\fR, \fBsupersparc\fR, \fBhypersparc\fR,
-\&\fBleon\fR, \fBsparclite\fR, \fBf930\fR, \fBf934\fR, \fBsparclite86x\fR,
-\&\fBsparclet\fR, \fBtsc701\fR, \fBv9\fR, \fBultrasparc\fR,
-\&\fBultrasparc3\fR, \fBniagara\fR, \fBniagara2\fR, \fBniagara3\fR,
-and \fBniagara4\fR.
+\&\fBleon\fR, \fBleon3\fR, \fBsparclite\fR, \fBf930\fR, \fBf934\fR,
+\&\fBsparclite86x\fR, \fBsparclet\fR, \fBtsc701\fR, \fBv9\fR,
+\&\fBultrasparc\fR, \fBultrasparc3\fR, \fBniagara\fR, \fBniagara2\fR,
+\&\fBniagara3\fR and \fBniagara4\fR.
 .Sp
 Native Solaris and GNU/Linux toolchains also support the value \fBnative\fR,
 which selects the best architecture option for the host processor.
@@ -18172,7 +18177,7 @@ implementations.
 cypress
 .IP "v8" 4
 .IX Item "v8"
-supersparc, hypersparc, leon
+supersparc, hypersparc, leon, leon3
 .IP "sparclite" 4
 .IX Item "sparclite"
 f930, f934, sparclite86x
@@ -18235,10 +18240,11 @@ option \fB\-mcpu=\fR\fIcpu_type\fR does.
 The same values for \fB\-mcpu=\fR\fIcpu_type\fR can be used for
 \&\fB\-mtune=\fR\fIcpu_type\fR, but the only useful values are those
 that select a particular \s-1CPU\s0 implementation.  Those are \fBcypress\fR,
-\&\fBsupersparc\fR, \fBhypersparc\fR, \fBleon\fR, \fBf930\fR, \fBf934\fR,
-\&\fBsparclite86x\fR, \fBtsc701\fR, \fBultrasparc\fR, \fBultrasparc3\fR,
-\&\fBniagara\fR, \fBniagara2\fR, \fBniagara3\fR and \fBniagara4\fR.  With
-native Solaris and GNU/Linux toolchains, \fBnative\fR can also be used.
+\&\fBsupersparc\fR, \fBhypersparc\fR, \fBleon\fR, \fBleon3\fR, \fBf930\fR,
+\&\fBf934\fR, \fBsparclite86x\fR, \fBtsc701\fR, \fBultrasparc\fR,
+\&\fBultrasparc3\fR, \fBniagara\fR, \fBniagara2\fR, \fBniagara3\fR and
+\&\fBniagara4\fR.  With native Solaris and GNU/Linux toolchains, \fBnative\fR
+can also be used.
 .IP "\fB\-mv8plus\fR" 4
 .IX Item "-mv8plus"
 .PD 0
@@ -18313,6 +18319,10 @@ later.
 .IX Item "-mfix-at697f"
 Enable the documented workaround for the single erratum of the Atmel \s-1AT697F\s0
 processor (which corresponds to erratum #13 of the \s-1AT697E\s0 processor).
+.IP "\fB\-mfix\-ut699\fR" 4
+.IX Item "-mfix-ut699"
+Enable the documented workarounds for the floating-point errata and the data
+cache nullify errata of the \s-1UT699\s0 processor.
 .PP
 These \fB\-m\fR options are supported in addition to the above
 on \s-1SPARC\-V9\s0 processors in 64\-bit environments:

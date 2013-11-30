@@ -51,7 +51,8 @@
 #undef SUBSUBTARGET_EXTRA_SPECS
 #define SUBSUBTARGET_EXTRA_SPECS
 
-#define DEFAULT_ASM_SPEC "\
+#ifndef ASM_SPEC
+#define ASM_SPEC "\
 %{mbig-endian:-EB} \
 %{mlittle-endian:-EL} \
 %(asm_cpu_spec) \
@@ -60,9 +61,6 @@
 %{mthumb-interwork:-mthumb-interwork} \
 %{mfloat-abi=*} %{mfpu=*} \
 %(subtarget_extra_asm_spec)"
-
-#ifndef ASM_SPEC
-#define ASM_SPEC DEFAULT_ASM_SPEC
 #endif
 
 /* The ARM uses @ are a comment character so we need to redefine
