@@ -1,5 +1,5 @@
 /* Generated automatically by the program 'build/genpreds'
-   from the machine description file '../.././../gcc/gcc-ARM-4.8/gcc/config/arm/arm.md'.  */
+   from the machine description file '../.././../gcc/gcc-ARM-4.8.3/gcc/config/arm/arm.md'.  */
 
 #ifndef GCC_TM_PREDS_H
 #define GCC_TM_PREDS_H
@@ -22,11 +22,12 @@ extern int indirect_operand (rtx, enum machine_mode);
 extern int ordered_comparison_operator (rtx, enum machine_mode);
 extern int comparison_operator (rtx, enum machine_mode);
 extern int s_register_operand (rtx, enum machine_mode);
-extern int arm_hard_register_operand (rtx, enum machine_mode);
+extern int arm_hard_general_register_operand (rtx, enum machine_mode);
 extern int low_register_operand (rtx, enum machine_mode);
 extern int low_reg_or_int_operand (rtx, enum machine_mode);
 extern int arm_general_register_operand (rtx, enum machine_mode);
 extern int vfp_register_operand (rtx, enum machine_mode);
+extern int vfp_hard_register_operand (rtx, enum machine_mode);
 extern int zero_operand (rtx, enum machine_mode);
 extern int reg_or_zero_operand (rtx, enum machine_mode);
 extern int subreg_lowpart_operator (rtx, enum machine_mode);
